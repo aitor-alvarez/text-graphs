@@ -1,0 +1,5 @@
+creds.py
+*.txt
+data/covid
+data/Twitter_URL
+venv/
