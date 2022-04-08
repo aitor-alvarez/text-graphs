@@ -26,9 +26,3 @@ def download_tweets(data_file, output_file):
 			start=0
 	df['tweet_text'] = tweets
 	df.to_csv(output_file)
-
-
-
-
-
-
