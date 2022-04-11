@@ -6,7 +6,7 @@ import time
 tkn = getattr(creds, "Bearer_Token", None)
 
 
-#Download tweets using the Twitter research API (hence max 300 tweets in 15 minutes)
+#Download tweets using the Twitter research API (hence max 300 tweets in 15 minutes) from a list of ids
 def download_tweets(data_file, output_file):
 	df = pd.read_csv(data_file)
 	tweets = []
