@@ -1,21 +1,40 @@
-import nltk
-from nltk.tokenize import NLTKWordTokenizer
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
+import json
+import os
+import pandas as pd
+
+dataset = 'data/pheme-rnr-dataset/'
+
+def process_pheme(dataset):
+	data = pd.DataFrame()
+	for event in os.listdir(dataset):
+		if os.path.isdir(dataset+event):
+			fn = "data/pheme-rnr-dataset/%s.csv" % (event)
+			for category in os.listdir("%s/%s" % (dataset, event)):
+				if os.path.isdir(dataset + event+'/'+category+'/'):
+					for thread in os.listdir("%s/%s/%s" % (dataset, event, category)):
+						if '.DS_Store' not in thread:
+							with open("%s/%s/%s/%s/source-tweet/%s.json" % (dataset, event, category, thread, thread)) as f:
+								tweet = json.load(f)
+							df = tweet_to_df(tweet, category, thread)
+							data.append(df)
+							for reaction in os.listdir("%s/%s/%s/%s/reactions" % (dataset, event, category, thread)):
+								if '.DS_Store' not in reaction:
+									with open("%s/%s/%s/%s/reactions/%s" % (dataset, event, category, thread, reaction)) as f:
+										tweet = json.load(f)
+									df = tweet_to_df(tweet, category, thread, False)
+									data = data.append(df)
+			data.to_csv(fn, index=False)
 
 
-word_tokenizer = NLTKWordTokenizer()
-
-stop_words = set(stopwords.words('english'))
-
-
-
-
-
-def normalize_text(sentences):
-	normalized_sentences =[]
-	for txt in sentences:
-		tkns = word_tokenizer.tokenize(txt)
-		tkns = [''.join(t.split('-')).lower() for t in tkns if t not in stop_words and t not in '@.,!#$%*:;"' and 'http' not in t and 'www' not in t]
-		normalized_sentences.append(' '.join(tkns))
-	return normalized_sentences
+def tweet_to_df(twt, cat, thrd, is_source_tweet=True):
+	return pd.DataFrame([{
+		"thread": thrd,
+		"tweet_length": len(twt.get("text", "")),
+		"text": twt.get("text"),
+		"id": twt.get("id"),
+		"in_reply_id": twt.get("in_reply_to_status_id", None),
+		"in_reply_user": twt.get("in_reply_to_user", None),
+		"is_rumor": True if cat == "rumours" else False,
+		"is_source_tweet": is_source_tweet,
+		"created": twt.get("created_at"),
+	}])
