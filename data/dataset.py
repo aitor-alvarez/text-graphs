@@ -5,8 +5,8 @@ import pandas as pd
 dataset = 'data/pheme-rnr-dataset/'
 
 def process_pheme(dataset):
-	data = pd.DataFrame()
 	for event in os.listdir(dataset):
+		data = pd.DataFrame()
 		if os.path.isdir(dataset+event):
 			fn = "data/pheme-rnr-dataset/%s.csv" % (event)
 			for category in os.listdir("%s/%s" % (dataset, event)):
@@ -16,7 +16,7 @@ def process_pheme(dataset):
 							with open("%s/%s/%s/%s/source-tweet/%s.json" % (dataset, event, category, thread, thread)) as f:
 								tweet = json.load(f)
 							df = tweet_to_df(tweet, category, thread)
-							data.append(df)
+							data = data.append(df)
 							for reaction in os.listdir("%s/%s/%s/%s/reactions" % (dataset, event, category, thread)):
 								if '.DS_Store' not in reaction:
 									with open("%s/%s/%s/%s/reactions/%s" % (dataset, event, category, thread, reaction)) as f:
@@ -24,6 +24,7 @@ def process_pheme(dataset):
 									df = tweet_to_df(tweet, category, thread, False)
 									data = data.append(df)
 			data.to_csv(fn, index=False)
+	return None
 
 
 def tweet_to_df(twt, cat, thrd, is_source_tweet=True):

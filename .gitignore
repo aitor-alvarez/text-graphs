@@ -7,3 +7,4 @@ venv/
 .idea/
 data/CMU_MisCov19_dataset.csv
 data/pheme-rnr-dataset
+*.json
