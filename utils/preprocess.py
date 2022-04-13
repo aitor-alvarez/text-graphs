@@ -3,10 +3,9 @@ from nltk.corpus import stopwords
 import os
 import pandas as pd
 import json
-
-word_tokenizer = NLTKWordTokenizer()
-
-stop_words = set(stopwords.words('english'))
+from gensim.models import Word2Vec
+from sentence_transformers import SentenceTransformer, util
+from transformers import AutoModel, AutoTokenizer
 
 
 def create_tree_pheme(dir):
@@ -28,11 +27,33 @@ def create_tree_pheme(dir):
 				tree.append({'root_id':int(root_id ), 'root_txt':root_txt, 'responses': replies_out})
 			trees.append(tree)
 	output = json.dumps(trees)
-	with open('json_data.json', 'w') as outfile:
+	with open('pheme_tree.json', 'w') as outfile:
 		outfile.write(output)
 
 
+#Create word embeddings for the tweets
+def word_embeddings(tweets):
+	sentences = normalize_text(tweets)
+	model = Word2Vec(sentences=sentences, vector_size=200, window=5, min_count=5)
+	embeddings = model.wv
+	embeddings.save("pretrained/word2vec.wordvectors")
+
+
+#Bertweet embedding
+def bert_tweet(tweets, fine_tune=False):
+	tokenizer = AutoTokenizer.from_pretrained("vinai/bertweet-base", use_fast=False)
+	if fine_tune:
+
+
+
+def transformer_sentences(tweets, fine_tune=False):
+	if fine_tune:
+
+
+
 def normalize_text(sentences):
+	word_tokenizer = NLTKWordTokenizer()
+	stop_words = set(stopwords.words('english'))
 	normalized_sentences =[]
 	for txt in sentences:
 		tkns = word_tokenizer.tokenize(txt)
