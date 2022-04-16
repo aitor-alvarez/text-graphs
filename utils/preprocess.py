@@ -28,7 +28,7 @@ def create_tree_pheme(dir):
 				tree.append({'root_id':int(root_id ), 'root_txt':root_txt, 'root_label':1 if data['is_rumor']=='TRUE' else 0, 'responses': replies_out})
 			trees.append(tree)
 	output = json.dumps(trees)
-	with open('pheme_tree.json', 'w') as outfile:
+	with open('data/pheme-rnr-dataset/pheme_tree.json', 'w') as outfile:
 		outfile.write(output)
 
 
@@ -59,9 +59,7 @@ def bert_tweet(tweets):
 
 	with torch.no_grad():
 		output = tweet_model(**tokens)
-
 	tweet_embeddings = mean_pooling(output, tokens['attention_mask'])
-
 	return tweet_embeddings
 
 
@@ -69,7 +67,6 @@ def transformer_sentences(tweets, fine_tune=False):
 	model = SentenceTransformer('bert-base-nli-mean-tokens')
 	embeddings = model.encode(tweets)
 	return embeddings
-
 
 
 def normalize_text(sentences):
@@ -108,5 +105,4 @@ def transformer_fine_tuning(model_name, train_data, test_data, tokenizer, nlabel
 		data_collator=data_collator,
 	)
 	trainer.train()
-
 	return model
