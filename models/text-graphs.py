@@ -8,6 +8,7 @@ from torch_geometric.nn.models.tgn import (
     LastAggregator,
     LastNeighborLoader,
 )
+from torch_geometric.data import TemporalData
 
 class TimeConversationalGraph():
 

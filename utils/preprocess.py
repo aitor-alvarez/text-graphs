@@ -8,10 +8,15 @@ from sentence_transformers import SentenceTransformer
 from transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, \
 	DataCollatorWithPadding
 import torch
+from torch_geometric.data import TemporalData
+from torch_geometric.utils import from_networkx
+import networkx as nx
 
+
+tokenizer = AutoTokenizer.from_pretrained("vinai/bertweet-base", use_fast=False)
+tweet_model = AutoModel.from_pretrained("vinai/bertweet-base")
 
 def create_tree_pheme(dir):
-	trees = []
 	for f in os.listdir(dir):
 		tree = []
 		if f.endswith('.csv'):
@@ -24,16 +29,37 @@ def create_tree_pheme(dir):
 				replies = data[data['thread'] == root_id]
 				replies_out = []
 				for reply in replies.iterrows():
-					rep_dict = {'resp_id': int(reply[1][0]), 'resp_txt': reply[1][2],
-					            'label': 1 if data['is_rumor'] == 'TRUE' else 0}
+					rep_dict = {'resp_id': int(reply[1][3]), 'resp_txt': reply[1][2],
+					            'label': 1 if str(reply[1][6]) == 'True' else 0}
 					replies_out.append(rep_dict)
 				tree.append(
-					{'root_id': int(root_id), 'root_txt': root_txt, 'root_label': 1 if data['is_rumor'] == 'TRUE' else 0,
+					{'root_id': int(root_id), 'root_txt': root_txt, 'root_label':1 if str(root[1][6]) == 'True' else 0,
 					 'responses': replies_out})
-			trees.append(tree)
-	output = json.dumps(trees)
-	with open('data/pheme-rnr-dataset/pheme_tree.json', 'w') as outfile:
-		outfile.write(output)
+
+			output = json.dumps(tree)
+			with open('data/pheme-rnr-dataset/'+f.replace('.csv','')+'_tree.json', 'w') as outfile:
+				outfile.write(output)
+
+
+#Build and save conversation graph
+def generate_conversation_graph(directory):
+	roots=[]
+	for d in os.listdir(directory):
+		graph = nx.Graph()
+		if d.endswith('.json'):
+			filename = d.replace('.json', '.pt')
+			with open(directory+d, 'r') as js:
+				js_data = json.loads(js.read())
+			for j in js_data:
+				roots.append(j['root_id'])
+				graph.add_node(j['root_id'], x=bert_tweet([j['root_txt']]), y=j['root_label'])
+				for node in j['responses']:
+					graph.add_node(node['resp_id'], x= bert_tweet([j['root_txt']]), y=j['root_label'])
+					graph.add_edge(j['root_id'], node['resp_id'])
+
+			output = from_networkx(graph)
+			torch.save(output, 'data/pheme-rnr-dataset/graphs/conversation/'+filename)
+	return None
 
 
 # Create word embeddings for the tweets using shallow models
@@ -47,12 +73,12 @@ def word_embeddings(tweets):
 
 # Bertweet embedding
 def bert_tweet(tweets):
-	tokenizer = AutoTokenizer.from_pretrained("vinai/bertweet-base", use_fast=False)
-	tweet_model = AutoModel.from_pretrained("vinai/bertweet-base")
+
 	tokens = {'input_ids': [], 'attention_mask': []}
 
 	for sen in tweets:
-		tkn = tokenizer.encode_plus(sen, max_length=130,
+		sen_norm = tokenizer.normalizeTweet(sen)
+		tkn = tokenizer.encode_plus(sen_norm, max_length=130,
 		                            truncation=True, padding='max_length',
 		                            return_tensors='pt')
 		tokens['input_ids'].append(tkn['input_ids'][0])
@@ -67,7 +93,7 @@ def bert_tweet(tweets):
 	return tweet_embeddings
 
 
-def transformer_sentences(tweets, fine_tune=False):
+def transformer_sentences(tweets):
 	model = SentenceTransformer('bert-base-nli-mean-tokens')
 	embeddings = model.encode(tweets)
 	return embeddings
@@ -80,7 +106,7 @@ def normalize_text(sentences):
 	for txt in sentences:
 		tkns = word_tokenizer.tokenize(txt)
 		tkns = [''.join(t.split('-')).lower() for t in tkns if
-		        t not in stop_words and t not in '@.,!#$%*:;"' and 'http' not in t and 'www' not in t]
+		        t not in stop_words and t not in '@.,!#$%*:;"' and 'http' not in t and 'www' not in t and len(t)>1]
 		normalized_sentences.append(' '.join(tkns))
 	return normalized_sentences
 
@@ -99,7 +125,7 @@ def transformer_fine_tuning(model_name, train_data, test_data, tokenizer, nlabel
 	training_args = TrainingArguments(output_dir="data/trained/model_" + model_name, learning_rate=2e-5,
 	                                  per_device_train_batch_size=16, per_device_eval_batch_size=16,
 	                                  num_train_epochs=5,
-	                                  weight_decay=0.01, )
+	                                  weight_decay=0.001, )
 	trainer = Trainer(
 		model=model,
 		args=training_args,
