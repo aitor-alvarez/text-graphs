@@ -41,7 +41,7 @@ def create_tree_pheme(dir):
 				outfile.write(output)
 
 
-#Build and save conversation graph
+#Build and save conversation graph for each event data
 def generate_conversation_graph(directory):
 	roots=[]
 	for d in os.listdir(directory):
@@ -51,12 +51,15 @@ def generate_conversation_graph(directory):
 			with open(directory+d, 'r') as js:
 				js_data = json.loads(js.read())
 			for j in js_data:
-				roots.append(j['root_id'])
+				roots.append(int(j['root_id']))
 				graph.add_node(j['root_id'], x=bert_tweet([j['root_txt']]), y=j['root_label'])
 				for node in j['responses']:
-					graph.add_node(node['resp_id'], x= bert_tweet([j['root_txt']]), y=j['root_label'])
+					graph.add_node(node['resp_id'], x= bert_tweet([node['resp_txt']]), y=node['resp_label'])
 					graph.add_edge(j['root_id'], node['resp_id'])
-
+			roots.sort()
+			for i in range(0, len(roots)):
+				if i < len(roots)-1:
+					graph.add_edge(roots[i], roots[i+1])
 			output = from_networkx(graph)
 			torch.save(output, 'data/pheme-rnr-dataset/graphs/conversation/'+filename)
 	return None
