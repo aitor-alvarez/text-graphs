@@ -51,11 +51,19 @@ def generate_conversation_graph(directory):
 			with open(directory+d, 'r') as js:
 				js_data = json.loads(js.read())
 			for j in js_data:
-				roots.append(int(j['root_id']))
-				graph.add_node(j['root_id'], x=bert_tweet([j['root_txt']]), y=j['root_label'])
+				try:
+					root_embedding = bert_tweet([j['root_txt']])
+					graph.add_node(j['root_id'], x=root_embedding, y=j['root_label'])
+					roots.append(int(j['root_id']))
+				except:
+					continue
 				for node in j['responses']:
-					graph.add_node(node['resp_id'], x= bert_tweet([node['resp_txt']]), y=node['resp_label'])
-					graph.add_edge(j['root_id'], node['resp_id'])
+					try:
+						node_embedding = bert_tweet([node['resp_txt']])
+						graph.add_node(node['resp_id'], x= node_embedding, y=node['label'])
+						graph.add_edge(j['root_id'], node['resp_id'])
+					except:
+						continue
 			roots.sort()
 			for i in range(0, len(roots)):
 				if i < len(roots)-1:
