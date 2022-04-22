@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import json
 from gensim.models import Word2Vec
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 from transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, \
 	DataCollatorWithPadding
 import torch
@@ -43,18 +43,19 @@ def create_tree_pheme(dir):
 
 #Build and save conversation graph for each event data
 def generate_conversation_graph(directory):
-	roots=[]
 	for d in os.listdir(directory):
-		graph = nx.Graph()
+		dir = directory+'graphs/conversation/'+d.replace('.json','')+'/'
+		if not os.path.exists(dir) and d.endswith('.json'):
+			os.mkdir(dir)
 		if d.endswith('.json'):
-			filename = d.replace('.json', '.pt')
 			with open(directory+d, 'r') as js:
 				js_data = json.loads(js.read())
 			for j in js_data:
+				graph = nx.Graph()
+				filename = str(j['root_id'])+'.pt'
 				try:
 					root_embedding = bert_tweet([j['root_txt']])
 					graph.add_node(j['root_id'], x=root_embedding, y=j['root_label'])
-					roots.append(int(j['root_id']))
 				except:
 					continue
 				for node in j['responses']:
@@ -62,14 +63,12 @@ def generate_conversation_graph(directory):
 						node_embedding = bert_tweet([node['resp_txt']])
 						graph.add_node(node['resp_id'], x= node_embedding, y=node['label'])
 						graph.add_edge(j['root_id'], node['resp_id'])
+						sim = embedding_similarity(root_embedding, node_embedding)
+						nx.set_edge_attributes(graph, {(j['root_id'], node['resp_id']): {"weight": sim}})
 					except:
 						continue
-			roots.sort()
-			for i in range(0, len(roots)):
-				if i < len(roots)-1:
-					graph.add_edge(roots[i], roots[i+1])
-			output = from_networkx(graph)
-			torch.save(output, 'data/pheme-rnr-dataset/graphs/conversation/'+filename)
+				output = from_networkx(graph)
+				torch.save(output, dir+filename)
 	return None
 
 
@@ -80,6 +79,12 @@ def word_embeddings(tweets):
 	embeddings = model.wv
 	embeddings.save("pretrained/word2vec.wordvectors")
 	return embeddings
+
+
+#Cosine similarity of two embeddings with the same dimension
+def embedding_similarity(emb1, emb2):
+	similarity = util.cos_sim(emb1, emb2)
+	return similarity
 
 
 # Bertweet embedding
