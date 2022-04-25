@@ -11,7 +11,7 @@ class ConversationalGraph(nn.Module):
         self.gconv1 = GraphConv(embedding_size, hidden_channels)
         self.gconv2 = GraphConv(hidden_channels, hidden_channels)
         self.gconv3 = GraphConv(hidden_channels, hidden_channels)
-        self.linear = GraphConv(hidden_channels, num_classes)
+        self.linear = nn.Linear(hidden_channels, num_classes)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x_embeddings, edge_index, weights, batch):
@@ -19,6 +19,9 @@ class ConversationalGraph(nn.Module):
         x = self.relu(x)
         x = F.dropout(x, training=self.training)
         x = self.gconv2(x, edge_index, weights)
+        x = self.relu(x)
+        x = F.dropout(x, training=self.training)
+        x = self.gconv3(x, edge_index, weights)
         x = self.relu(x)
         x = F.dropout(x, training=self.training)
         #Mean pool over graphs
