@@ -1,7 +1,8 @@
 from typing import List
 import torch
 from torch_geometric.data import TemporalData
-
+import os
+import random
 
 class TemporalDataLoader(torch.utils.data.DataLoader):
     r"""A data loader which merges succesive events of a
@@ -32,3 +33,17 @@ class TemporalDataLoader(torch.utils.data.DataLoader):
         super().__init__(arange, 1, shuffle=False, collate_fn=self, **kwargs)
     def __call__(self, arange: List[int]) -> TemporalData:
         return self.data[arange[0]:arange[0] + self.events_per_batch]
+
+
+def graph_loader(dir):
+    data = []
+    directory = [d for d in os.listdir(dir) if '.DS_Store' not in d]
+    directory2 = random.sample(directory, 4)
+    for d in directory2:
+        data_dir=[]
+        if os.path.isdir(dir+d):
+            for f in os.listdir(dir+d+'/'):
+                if '.DS_Store' not in f:
+                    data_dir.append(torch.load(dir+d+'/'+f))
+        data.append(data_dir)
+    return data
