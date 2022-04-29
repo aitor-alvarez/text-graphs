@@ -36,14 +36,19 @@ class TemporalDataLoader(torch.utils.data.DataLoader):
 
 
 def graph_loader(dir):
-    data = []
+    train_data = []
+    test_data = []
     directory = [d for d in os.listdir(dir) if '.DS_Store' not in d]
-    directory2 = random.sample(directory, 4)
-    for d in directory2:
+    train_dir = random.sample(directory, 4)
+    test_dir = list(set(directory) - set(train_dir))
+    for d in train_dir:
         data_dir=[]
         if os.path.isdir(dir+d):
             for f in os.listdir(dir+d+'/'):
                 if '.DS_Store' not in f:
                     data_dir.append(torch.load(dir+d+'/'+f))
-        data.append(data_dir)
-    return data
+        train_data.append(data_dir)
+    for f in os.listdir(dir + test_dir[0] + '/'):
+        if '.DS_Store' not in f:
+            test_data.append(torch.load(dir + d + '/' + f))
+    return train_data, test_data
